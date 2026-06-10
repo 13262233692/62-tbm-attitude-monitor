@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useTBMStore } from "../store/tbmStore";
@@ -42,10 +42,15 @@ function Cutterhead() {
     []
   );
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!groupRef.current) return;
     const rpm = useTBMStore.getState().telemetry.cutterhead_rpm;
-    groupRef.current.rotation.z += (rpm / 60) * (Math.PI * 2) * 0.016;
+    const angularVelocity = (rpm / 60) * Math.PI * 2;
+    const incrementalQuat = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 0, 1),
+      angularVelocity * delta
+    );
+    groupRef.current.quaternion.premultiply(incrementalQuat);
   });
 
   return (
@@ -167,11 +172,15 @@ function SegmentErector() {
     []
   );
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!groupRef.current) return;
     const isRingBuilding = useTBMStore.getState().telemetry.is_ring_building;
     if (isRingBuilding) {
-      groupRef.current.rotation.z += 0.005;
+      const incrementalQuat = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 0, 1),
+        0.3 * delta
+      );
+      groupRef.current.quaternion.premultiply(incrementalQuat);
     }
   });
 
@@ -287,11 +296,11 @@ function ConveyorBelt() {
 export default function TBMModel() {
   const groupRef = useRef<THREE.Group>(null);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!groupRef.current) return;
-    const { pitch, roll, yaw } = useTBMStore.getState().telemetry;
-    const DEG2RAD = Math.PI / 180;
-    groupRef.current.rotation.set(pitch * DEG2RAD, yaw * DEG2RAD, roll * DEG2RAD);
+
+    const smoothedQuat = useTBMStore.getState().slerpTick(delta);
+    groupRef.current.quaternion.copy(smoothedQuat);
   });
 
   return (

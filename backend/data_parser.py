@@ -84,3 +84,67 @@ class DataParser:
         Rz = np.array([[np.cos(r), -np.sin(r), 0], [np.sin(r), np.cos(r), 0], [0, 0, 1]])
 
         return Ry @ Rx @ Rz
+
+    @staticmethod
+    def euler_to_quaternion(pitch_deg: float, roll_deg: float, yaw_deg: float) -> dict:
+        p = np.radians(pitch_deg) / 2.0
+        r = np.radians(roll_deg) / 2.0
+        y = np.radians(yaw_deg) / 2.0
+
+        cp = np.cos(p)
+        sp = np.sin(p)
+        cr = np.cos(r)
+        sr = np.sin(r)
+        cy = np.cos(y)
+        sy = np.sin(y)
+
+        w = cr * cp * cy + sr * sp * sy
+        x = cr * sp * cy + sr * cp * sy
+        y_out = cr * cp * sy - sr * sp * cy
+        z = sr * cp * cy - cr * sp * sy
+
+        norm = np.sqrt(w * w + x * x + y_out * y_out + z * z)
+        if norm > 0:
+            w /= norm
+            x /= norm
+            y_out /= norm
+            z /= norm
+
+        return {"qx": float(x), "qy": float(y_out), "qz": float(z), "qw": float(w)}
+
+    @staticmethod
+    def rotation_matrix_to_quaternion(R: np.ndarray) -> dict:
+        trace = R[0, 0] + R[1, 1] + R[2, 2]
+
+        if trace > 0:
+            s = 0.5 / np.sqrt(trace + 1.0)
+            w = 0.25 / s
+            x = (R[2, 1] - R[1, 2]) * s
+            y = (R[0, 2] - R[2, 0]) * s
+            z = (R[1, 0] - R[0, 1]) * s
+        elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
+            s = 2.0 * np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2])
+            w = (R[2, 1] - R[1, 2]) / s
+            x = 0.25 * s
+            y = (R[0, 1] + R[1, 0]) / s
+            z = (R[0, 2] + R[2, 0]) / s
+        elif R[1, 1] > R[2, 2]:
+            s = 2.0 * np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2])
+            w = (R[0, 2] - R[2, 0]) / s
+            x = (R[0, 1] + R[1, 0]) / s
+            y = 0.25 * s
+            z = (R[1, 2] + R[2, 1]) / s
+        else:
+            s = 2.0 * np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1])
+            w = (R[1, 0] - R[0, 1]) / s
+            x = (R[0, 2] + R[2, 0]) / s
+            y = (R[1, 2] + R[2, 1]) / s
+            z = 0.25 * s
+
+        norm = np.sqrt(w * w + x * x + y * y + z * z)
+        return {
+            "qx": float(x / norm),
+            "qy": float(y / norm),
+            "qz": float(z / norm),
+            "qw": float(w / norm),
+        }

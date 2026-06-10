@@ -1,8 +1,10 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, PerspectiveCamera, Stars } from "@react-three/drei";
+import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import TBMModel from "./TBMModel";
 import TunnelEnvironment from "./TunnelEnvironment";
 import SceneLighting from "./SceneLighting";
+import GroundSubsidenceMesh from "./GroundSubsidenceMesh";
+import SettlementWarningPillars from "./SettlementWarningPillars";
 
 export default function TBMScene() {
   return (
@@ -29,6 +31,8 @@ export default function TBMScene() {
       <SceneLighting />
       <TBMModel />
       <TunnelEnvironment />
+      <GroundSubsidenceMesh />
+      <SettlementWarningPillars />
     </Canvas>
   );
 }

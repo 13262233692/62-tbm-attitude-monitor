@@ -162,6 +162,27 @@ export default function TelemetryDashboard() {
             color="#14b8a6"
             icon="↻"
           />
+          <MetricCard
+            label="体积损失率"
+            value={formatNumber(t.volume_loss, 2)}
+            unit="%"
+            color={t.volume_loss > 2.0 ? "#ef4444" : "#f59e0b"}
+            icon="▼"
+          />
+          <MetricCard
+            label="最大沉降"
+            value={formatNumber(t.settlement_max, 1)}
+            unit="mm"
+            color={t.settlement_max > 10.0 ? "#ef4444" : "#8b5cf6"}
+            icon="⌇"
+          />
+          <MetricCard
+            label="沉降槽宽"
+            value={formatNumber(t.trough_width, 1)}
+            unit="m"
+            color="#06b6d4"
+            icon="∿"
+          />
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import signal
 import sys
 
 from models import PLCRegisterMap
-from data_parser import DataParser
+from data_parser import DataParser, PeckSettlement
 from plc_client import S7PLCClient, OPCUAClient
 from websocket_server import TelemetryWebSocketServer
 from simulator import TBMSimulator
@@ -26,6 +26,11 @@ async def run_with_simulator(ws_server: TelemetryWebSocketServer, register_map: 
 
     async def on_raw_data(raw: bytes):
         telemetry = parser.parse_s7_block(raw)
+        s_max = PeckSettlement.max_settlement(
+            telemetry.volume_loss, PeckSettlement.TUNNEL_RADIUS, telemetry.tunnel_depth
+        )
+        i = PeckSettlement.trough_width_parameter(telemetry.tunnel_depth)
+        telemetry = telemetry.model_copy(update={"settlement_max": s_max, "trough_width": i})
         await ws_server.broadcast(telemetry)
 
     sim_task = asyncio.create_task(simulator.poll_loop(on_raw_data))

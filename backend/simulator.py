@@ -7,6 +7,7 @@ import numpy as np
 from typing import Callable, Awaitable
 
 from models import PLCRegisterMap, TBMTelemetry
+from data_parser import PeckSettlement
 
 logging = __import__("logging")
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ class TBMSimulator:
         self._phase_timer = 0.0
         self._excavation_duration = 30.0
         self._ring_build_duration = 10.0
+        self._tunnel_depth = 12.0
 
     def _generate_s7_block(self) -> bytes:
         rm = self.register_map
@@ -53,6 +55,7 @@ class TBMSimulator:
             torque = 3200.0 + 400.0 * math.sin(self._t * 0.35 + 1.2)
             screw_speed = 8.5 + 1.0 * math.sin(self._t * 0.6)
             grout_pressure = 0.0
+            volume_loss = 1.2 + 0.6 * math.sin(self._t * 0.18 + 0.7)
         else:
             advance = 0.0
             pitch = 0.35 + 0.02 * math.sin(self._t * 0.05)
@@ -64,6 +67,7 @@ class TBMSimulator:
             torque = 0.0
             screw_speed = 0.0
             grout_pressure = 0.28 + 0.04 * math.sin(self._t * 0.2)
+            volume_loss = 0.3 + 0.1 * math.sin(self._t * 0.05)
 
         noise = lambda s=0.01: random.gauss(0, s)
 
@@ -84,6 +88,9 @@ class TBMSimulator:
         status = 0x0001 if self._excavation_phase else 0x0002
         struct.pack_into(">I", buf, rm.status_word_offset, status)
 
+        struct.pack_into(">f", buf, rm.volume_loss_offset, max(0, volume_loss + noise(0.02)))
+        struct.pack_into(">f", buf, rm.tunnel_depth_offset, self._tunnel_depth + noise(0.01))
+
         return bytes(buf)
 
     def generate_telemetry(self) -> TBMTelemetry:
@@ -91,7 +98,17 @@ class TBMSimulator:
 
         raw = self._generate_s7_block()
         parser = DataParser(self.register_map)
-        return parser.parse_s7_block(raw)
+        telemetry = parser.parse_s7_block(raw)
+
+        s_max = PeckSettlement.max_settlement(
+            telemetry.volume_loss, PeckSettlement.TUNNEL_RADIUS, telemetry.tunnel_depth
+        )
+        i = PeckSettlement.trough_width_parameter(telemetry.tunnel_depth)
+
+        return telemetry.model_copy(update={
+            "settlement_max": s_max,
+            "trough_width": i,
+        })
 
     async def poll_loop(self, callback: Callable[[bytes], Awaitable[None]]):
         self._running = True

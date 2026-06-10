@@ -55,17 +55,19 @@ class TelemetryWebSocketServer:
             return
 
         payload = telemetry.model_dump_json()
-        disconnected = set()
-        for client in self._clients:
+        snapshot = list(self._clients)
+        disconnected = []
+        for client in snapshot:
             try:
                 await client.send(payload)
             except websockets.exceptions.ConnectionClosed:
-                disconnected.add(client)
+                disconnected.append(client)
             except Exception as e:
                 logger.error(f"Broadcast error: {e}")
-                disconnected.add(client)
+                disconnected.append(client)
 
-        self._clients -= disconnected
+        for c in disconnected:
+            self._clients.discard(c)
 
     async def stop(self):
         if self._server:

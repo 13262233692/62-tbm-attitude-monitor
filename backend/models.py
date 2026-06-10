@@ -23,6 +23,11 @@ class TBMTelemetry(BaseModel):
     grout_pressure: float = Field(default=0.0, description="Grout pressure in MPa")
     screw_conveyor_speed: float = Field(default=0.0, description="Screw conveyor speed in RPM")
 
+    volume_loss: float = Field(default=0.0, description="Volume loss percentage (0-5%)")
+    tunnel_depth: float = Field(default=12.0, description="Tunnel center depth below surface in meters")
+    settlement_max: float = Field(default=0.0, description="Max surface settlement in mm (Peck formula)")
+    trough_width: float = Field(default=0.0, description="Settlement trough width parameter i in meters")
+
     is_excavating: bool = Field(default=False, description="Whether TBM is in excavation mode")
     is_ring_building: bool = Field(default=False, description="Whether TBM is in ring building mode")
 
@@ -64,4 +69,6 @@ class PLCRegisterMap(BaseModel):
     shield_tail_seal_pressure_offset: int = Field(default=40, description="DB offset for shield tail seal (REAL)")
     grout_pressure_offset: int = Field(default=44, description="DB offset for grout pressure (REAL)")
     screw_conveyor_speed_offset: int = Field(default=48, description="DB offset for screw conveyor (REAL)")
-    status_word_offset: int = Field(default=52, description="DB offset for status word (DWORD)")
+    volume_loss_offset: int = Field(default=56, description="DB offset for volume loss % (REAL)")
+    tunnel_depth_offset: int = Field(default=60, description="DB offset for tunnel depth (REAL)")
+    status_word_offset: int = Field(default=64, description="DB offset for status word (DWORD)")

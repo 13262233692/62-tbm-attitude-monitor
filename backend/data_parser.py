@@ -1,7 +1,39 @@
 import struct
 import time
+import math
 import numpy as np
 from models import TBMTelemetry, PLCRegisterMap
+
+
+class PeckSettlement:
+    TUNNEL_RADIUS = 3.5
+
+    @staticmethod
+    def trough_width_parameter(depth: float, soil_type: str = "clay") -> float:
+        k_map = {"clay": 0.5, "silty_clay": 0.45, "sand": 0.35, "gravel": 0.25}
+        k = k_map.get(soil_type, 0.45)
+        return k * depth
+
+    @staticmethod
+    def max_settlement(volume_loss_pct: float, radius: float, depth: float, soil_type: str = "clay") -> float:
+        i = PeckSettlement.trough_width_parameter(depth, soil_type)
+        if i <= 0:
+            return 0.0
+        vl_per_meter = (volume_loss_pct / 100.0) * math.pi * radius * radius
+        s_max = vl_per_meter / (math.sqrt(2 * math.pi) * i)
+        return s_max * 1000.0
+
+    @staticmethod
+    def settlement_at_y(y_distance: float, s_max_mm: float, i: float) -> float:
+        if i <= 0:
+            return 0.0
+        return s_max_mm * math.exp(-(y_distance ** 2) / (2 * i ** 2))
+
+    @staticmethod
+    def settlement_profile(y_positions: list, volume_loss_pct: float, radius: float, depth: float, soil_type: str = "clay") -> list:
+        i = PeckSettlement.trough_width_parameter(depth, soil_type)
+        s_max = PeckSettlement.max_settlement(volume_loss_pct, radius, depth, soil_type)
+        return [PeckSettlement.settlement_at_y(y, s_max, i) for y in y_positions]
 
 
 class DataParser:
@@ -42,6 +74,8 @@ class DataParser:
             shield_tail_seal_pressure=self.parse_real(raw_data, rm.shield_tail_seal_pressure_offset),
             grout_pressure=self.parse_real(raw_data, rm.grout_pressure_offset),
             screw_conveyor_speed=self.parse_real(raw_data, rm.screw_conveyor_speed_offset),
+            volume_loss=self.parse_real(raw_data, rm.volume_loss_offset),
+            tunnel_depth=self.parse_real(raw_data, rm.tunnel_depth_offset),
             is_excavating=is_excavating,
             is_ring_building=is_ring_building,
         )
@@ -52,6 +86,8 @@ class DataParser:
             return float(val) if val is not None else default
 
         status = int(_get("StatusWord", 0))
+        volume_loss = _get("VolumeLoss")
+        tunnel_depth = _get("TunnelDepth", 12.0)
         return TBMTelemetry(
             timestamp=time.time(),
             position_x=_get("PositionX"),
@@ -67,6 +103,8 @@ class DataParser:
             shield_tail_seal_pressure=_get("ShieldTailSealPressure"),
             grout_pressure=_get("GroutPressure"),
             screw_conveyor_speed=_get("ScrewConveyorSpeed"),
+            volume_loss=volume_loss,
+            tunnel_depth=tunnel_depth,
             is_excavating=bool(status & 0x0001),
             is_ring_building=bool(status & 0x0002),
         )

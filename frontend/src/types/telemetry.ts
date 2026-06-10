@@ -19,6 +19,11 @@ export interface TBMTelemetry {
   grout_pressure: number;
   screw_conveyor_speed: number;
 
+  volume_loss: number;
+  tunnel_depth: number;
+  settlement_max: number;
+  trough_width: number;
+
   is_excavating: boolean;
   is_ring_building: boolean;
 }
@@ -38,6 +43,10 @@ export const DEFAULT_TELEMETRY: TBMTelemetry = {
   shield_tail_seal_pressure: 0,
   grout_pressure: 0,
   screw_conveyor_speed: 0,
+  volume_loss: 0,
+  tunnel_depth: 12,
+  settlement_max: 0,
+  trough_width: 0,
   is_excavating: false,
   is_ring_building: false,
 };

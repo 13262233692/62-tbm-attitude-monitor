@@ -1,9 +1,14 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useTBMStore } from "../store/tbmStore";
 import type { TBMTelemetry } from "../types/telemetry";
+import { DEFAULT_TELEMETRY } from "../types/telemetry";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8765";
 const RECONNECT_DELAY = 3000;
+
+function safeMerge(raw: Partial<TBMTelemetry>): TBMTelemetry {
+  return { ...DEFAULT_TELEMETRY, ...raw };
+}
 
 export function useTelemetryWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
@@ -22,7 +27,8 @@ export function useTelemetryWebSocket() {
 
     ws.onmessage = (event) => {
       try {
-        const data: TBMTelemetry = JSON.parse(event.data);
+        const raw: Partial<TBMTelemetry> = JSON.parse(event.data);
+        const data = safeMerge(raw);
         updateTelemetry(data);
       } catch {
         // ignore malformed messages
